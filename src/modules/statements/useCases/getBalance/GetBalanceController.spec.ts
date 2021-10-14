@@ -8,7 +8,7 @@ import createConnection from '../../../../database';
 
 let connection: Connection;
 
-describe('Create statement', () => {
+describe('Get balance', () => {
   beforeAll(async () => {
     connection = await createConnection();
     await connection.runMigrations();
@@ -27,7 +27,7 @@ describe('Create statement', () => {
     await connection.close();
   });
 
-  it('Should be able to create deposit statement', async () => {
+  it('Should be able to get balance', async () => {
     const responseToken = await request(app).post('/api/v1/sessions').send({
       email: 'admin@finapi.com.br',
       password: 'admin',
@@ -45,19 +45,6 @@ describe('Create statement', () => {
         Authorization: `Bearer ${token}`,
       });
 
-    expect(deposit.status).toBe(201);
-    expect(deposit.body).toHaveProperty('id');
-    expect(deposit.body.amount).toBe(100);
-  });
-
-  it('Should be able to create withdraw statement', async () => {
-    const responseToken = await request(app).post('/api/v1/sessions').send({
-      email: 'admin@finapi.com.br',
-      password: 'admin',
-    });
-
-    const { token } = responseToken.body;
-
     const withdraw = await request(app)
       .post('/api/v1/statements/withdraw')
       .send({
@@ -68,29 +55,15 @@ describe('Create statement', () => {
         Authorization: `Bearer ${token}`,
       });
 
-    expect(withdraw.status).toBe(201);
-    expect(withdraw.body).toHaveProperty('id');
-    expect(withdraw.body.amount).toBe(50);
-  });
-
-  it('should not be able to create withdraw statement without funds', async () => {
-    const responseToken = await request(app).post('/api/v1/sessions').send({
-      email: 'admin@finapi.com.br',
-      password: 'admin',
-    });
-
-    const { token } = responseToken.body;
-
-    const response = await request(app)
-      .post('/api/v1/statements/withdraw')
-      .send({
-        amount: 100,
-        description: 'Withdraw test',
-      })
+    const balance = await request(app)
+      .get('/api/v1/statements/balance')
+      .send()
       .set({
         Authorization: `Bearer ${token}`,
       });
 
-    expect(response.status).toBe(400);
+    expect(balance.status).toBe(200);
+    expect(balance.body.statement[0].id).toBe(deposit.body.id);
+    expect(balance.body.statement[1].id).toBe(withdraw.body.id);
   });
 });
